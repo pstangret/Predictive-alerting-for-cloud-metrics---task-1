@@ -1,0 +1,38 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Set seed for reproducibility
+np.random.seed(42)
+
+# 1. Generate normal baseline data (e.g., 10,000 minutes of metric data)
+n_steps = 10000
+time = np.arange(n_steps)
+# Baseline: A sine wave (daily seasonality) + random noise
+baseline = 50 + 10 * np.sin(2 * np.pi * time / 1440) + np.random.normal(0, 2, n_steps)
+
+# 2. Inject Incidents
+incidents = np.zeros(n_steps, dtype=int)
+metric_data = baseline.copy()
+
+# Randomly select start points for incidents (anomalies)
+num_incidents = 30
+incident_starts = np.random.choice(n_steps - 60, num_incidents, replace=False)
+
+for start in incident_starts:
+    duration = np.random.randint(10, 30) # Incidents last 10 to 30 minutes
+    # Spike the metric
+    metric_data[start:start+duration] += np.random.normal(25, 5, duration) 
+    # Label the incident
+    incidents[start:start+duration] = 1
+
+# Put into a DataFrame for easy viewing
+df = pd.DataFrame({'time': time, 'metric': metric_data, 'is_incident': incidents})
+
+# Plot a slice to visualize
+plt.figure(figsize=(12, 4))
+plt.plot(df['time'][:2000], df['metric'][:2000], label='Cloud Metric')
+plt.fill_between(df['time'][:2000], 0, 100, where=df['is_incident'][:2000]==1, color='red', alpha=0.3, label='Incident')
+plt.title("Synthetic Cloud Metric with Incidents")
+plt.legend()
+plt.show()
