@@ -1,0 +1,22 @@
+def create_sliding_windows(metric_data, incident_labels, W, H):
+    X, y = [], []
+    # Slide the window across the dataset
+    for i in range(len(metric_data) - W - H + 1):
+        # Features: The past W steps
+        window = metric_data[i : i + W]
+        # Target: 1 if ANY incident occurs in the next H steps
+        future_incidents = incident_labels[i + W : i + W + H]
+        target = 1 if np.any(future_incidents) else 0
+        
+        X.append(window)
+        y.append(target)
+        
+    return np.array(X), np.array(y)
+
+# Define W (e.g., look back 60 minutes) and H (e.g., predict within next 15 minutes)
+W = 60
+H = 15
+
+X, y = create_sliding_windows(df['metric'].values, df['is_incident'].values, W, H)
+print(f"Feature matrix shape: {X.shape}")
+print(f"Target array shape: {y.shape}")
