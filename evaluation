@@ -1,0 +1,37 @@
+from sklearn.metrics import precision_recall_curve, confusion_matrix, classification_report
+
+# Predict probabilities for the positive class (incident)
+y_probs = model.predict_proba(X_test)[:, 1]
+
+# Calculate precision, recall, and thresholds
+precisions, recalls, thresholds = precision_recall_curve(y_test, y_probs)
+
+# Find the threshold that gives us ~80% recall
+target_recall = 0.80
+# Find the index where recall is closest to our target
+idx = np.argmin(np.abs(recalls - target_recall))
+optimal_threshold = thresholds[idx]
+achieved_precision = precisions[idx]
+achieved_recall = recalls[idx]
+
+print(f"To achieve ~80% Recall, we use a probability threshold of: {optimal_threshold:.4f}")
+print(f"At this threshold, Precision is: {achieved_precision:.4f} and Recall is: {achieved_recall:.4f}")
+
+# Apply the custom threshold to get binary predictions
+y_pred_custom = (y_probs >= optimal_threshold).astype(int)
+
+# Print final evaluation
+print("\n--- Confusion Matrix ---")
+print(confusion_matrix(y_test, y_pred_custom))
+print("\n--- Classification Report ---")
+print(classification_report(y_test, y_pred_custom))
+
+# Optional: Plot the PR Curve
+plt.figure(figsize=(8, 6))
+plt.plot(recalls, precisions, marker='.', label='Random Forest')
+plt.scatter(achieved_recall, achieved_precision, color='red', s=100, label=f'Threshold {optimal_threshold:.2f}')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Precision-Recall Curve')
+plt.legend()
+plt.show()
