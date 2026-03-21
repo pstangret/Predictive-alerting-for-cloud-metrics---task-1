@@ -1,5 +1,5 @@
 # Predictive-alerting-for-cloud-metrics---task-1
-Task 1
+Task 1 - to have results just run main.py
 
 ## Predictive Alerting for Cloud Metrics
 # Project Overview
