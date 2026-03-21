@@ -1,0 +1,77 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import precision_recall_curve, confusion_matrix, classification_report
+
+# ==========================================
+# STEP 1: Generate Synthetic Dataset
+# ==========================================
+np.random.seed(42)
+n_steps = 10000
+time = np.arange(n_steps)
+baseline = 50 + 10 * np.sin(2 * np.pi * time / 1440) + np.random.normal(0, 2, n_steps)
+
+incidents = np.zeros(n_steps, dtype=int)
+metric_data = baseline.copy()
+
+num_incidents = 30
+incident_starts = np.random.choice(n_steps - 60, num_incidents, replace=False)
+
+for start in incident_starts:
+    duration = np.random.randint(10, 30)
+    metric_data[start:start+duration] += np.random.normal(25, 5, duration)
+    incidents[start:start+duration] = 1
+
+df = pd.DataFrame({'time': time, 'metric': metric_data, 'is_incident': incidents})
+
+# ==========================================
+# STEP 2: Sliding Window
+# ==========================================
+def create_sliding_windows(metric_data, incident_labels, W, H):
+    X, y = [], []
+    for i in range(len(metric_data) - W - H + 1):
+        window = metric_data[i : i + W]
+        future_incidents = incident_labels[i + W : i + W + H]
+        target = 1 if np.any(future_incidents) else 0
+        X.append(window)
+        y.append(target)
+    return np.array(X), np.array(y)
+
+W = 60
+H = 15
+X, y = create_sliding_windows(df['metric'].values, df['is_incident'].values, W, H)
+
+# ==========================================
+# STEP 3: Chronological Split & Training
+# ==========================================
+split_idx = int(len(X) * 0.8)
+X_train, X_test = X[:split_idx], X[split_idx:]
+y_train, y_test = y[:split_idx], y[split_idx:]
+
+print(f"Training examples: {len(X_train)}, Testing examples: {len(X_test)}")
+
+model = RandomForestClassifier(n_estimators=100, max_depth=10, class_weight='balanced', random_state=42)
+model.fit(X_train, y_train)
+
+# ==========================================
+# STEP 4: Evaluation
+# ==========================================
+y_probs = model.predict_proba(X_test)[:, 1]
+precisions, recalls, thresholds = precision_recall_curve(y_test, y_probs)
+
+target_recall = 0.80
+idx = np.argmin(np.abs(recalls - target_recall))
+optimal_threshold = thresholds[idx]
+achieved_precision = precisions[idx]
+achieved_recall = recalls[idx]
+
+print(f"\nTo achieve ~80% Recall, we use a probability threshold of: {optimal_threshold:.4f}")
+print(f"At this threshold, Precision is: {achieved_precision:.4f} and Recall is: {achieved_recall:.4f}")
+
+y_pred_custom = (y_probs >= optimal_threshold).astype(int)
+
+print("\n--- Confusion Matrix ---")
+print(confusion_matrix(y_test, y_pred_custom))
+print("\n--- Classification Report ---")
+print(classification_report(y_test, y_pred_custom))
